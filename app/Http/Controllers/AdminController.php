@@ -4,54 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Role;
+use App\Models\SuratTugas;
+use App\Models\Jabatan;
+use App\Models\Provinsi;
+use App\Models\TimPemeriksa;
+use App\Models\WaktuPemeriksa;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
-    // ==========================================
-    // BAGIAN 1: AUTHENTICATION & LOGIN
-    // ==========================================
-
-    public function showLogin()
-    {
-        // Pastikan nama filenya sesuai, misal: resources/views/login.blade.php
-        return view('login'); 
-    }
-
-    public function prosesLogin(Request $request)
-    {
-        $request->validate([
-            'username' => 'required|string',
-            'password' => 'required|string',
-        ]);
-
-        $remember = $request->has('remember');
-
-        // Proses pencocokan ke database
-        if (Auth::attempt(['username' => $request->username, 'password' => $request->password], $remember)) {
-            $request->session()->regenerate();
-            
-            // Redirect ke halaman dashboard
-            return redirect()->intended('/dashboard');
-        }
-
-        // Jika gagal
-        return back()->withErrors([
-            'username' => 'Username atau Password salah!',
-        ])->onlyInput('username');
-    }
-
-    public function logout(Request $request)
-    {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        
-        return redirect('/');
-    }
-
 
     // ==========================================
     // BAGIAN 2: MANAJEMEN AKUN
@@ -114,6 +77,93 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Akun berhasil dihapus!');
     }
 
+    public function dashboardTimPemeriksa()
+    {
+        $suratTugas = SuratTugas::with([
+            'timPemeriksa.jabatan',
+            'timPemeriksa.waktuPemeriksa.provinsi',
+        ])
+        ->latest()
+        ->first();
+
+        $jabatan = Jabatan::orderBy('nama_jabatan')->get();
+
+        $provinsis = Provinsi::orderBy('nama_provinsi')->get();
+
+        return view('anggaran.tim-pemeriksa', compact(
+            'suratTugas',
+            'jabatan',
+            'provinsis'
+        ));
+    }
+
+    public function storeTimPemeriksa(Request $request)
+    {
+        $validated = $request->validate([
+            'surat_tugas_id' => 'required|exists:surat_tugas,id',
+
+            'pemeriksa' => 'required|array|min:1',
+
+            'pemeriksa.*.nama_pemeriksa' => 'required|string|max:255',
+
+            'pemeriksa.*.jabatan_id' => 'required|exists:jabatan,id',
+
+            'pemeriksa.*.jangka_waktu' => 'required|integer|min:1',
+
+            'pemeriksa.*.jumlah_biaya' => 'required|integer|min:1',
+
+            'pemeriksa.*.provinsi' => 'nullable|array',
+
+            'pemeriksa.*.provinsi.*' => 'nullable|integer|min:0',
+        ]);
+
+        DB::transaction(function () use ($validated) {
+
+            foreach ($validated['pemeriksa'] as $data) {
+
+                /*
+                |--------------------------------------------------------------------------
+                | 1. SIMPAN DATA TIM PEMERIKSA
+                |--------------------------------------------------------------------------
+                */
+
+                $timPemeriksa = TimPemeriksa::create([
+                    'surat_tugas_id' => $validated['surat_tugas_id'],
+                    'nama_pemeriksa' => $data['nama_pemeriksa'],
+                    'jabatan_id' => $data['jabatan_id'],
+                    'jangka_waktu' => $data['jangka_waktu'],
+                    'jumlah_biaya' => $data['jumlah_biaya'],
+                ]);
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | 2. SIMPAN WAKTU PEMERIKSA BERDASARKAN PROVINSI
+                |--------------------------------------------------------------------------
+                */
+
+                if (!empty($data['provinsi'])) {
+
+                    foreach ($data['provinsi'] as $provinsiId => $jumlahHari) {
+
+                        // Hanya simpan provinsi yang jumlah harinya > 0
+                        if ((int) $jumlahHari > 0) {
+
+                            WaktuPemeriksa::create([
+                                'tim_pemeriksa_id' => $timPemeriksa->id,
+                                'provinsi_id' => $provinsiId,
+                                'jumlah_hari' => $jumlahHari,
+                            ]);
+                        }
+                    }
+                }
+            }
+        });
+
+        return redirect()
+            ->back()
+            ->with('success', 'Tim pemeriksa berhasil disimpan.');
+    }
 
     // ==========================================
     // BAGIAN 3: MATRIKS PPK TRANS
