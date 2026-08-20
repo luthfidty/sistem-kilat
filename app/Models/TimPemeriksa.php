@@ -42,4 +42,12 @@ class TimPemeriksa extends Model
             'tim_pemeriksa_id'
         );
     }
+    public function realisasiSpj()
+    {
+        return $this->hasOne(
+            RealisasiSpj::class,
+            'tim_pemeriksa_id'
+        );
+    }
+    
 }

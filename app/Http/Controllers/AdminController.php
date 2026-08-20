@@ -8,6 +8,8 @@ use App\Models\SuratTugas;
 use App\Models\Jabatan;
 use App\Models\Provinsi;
 use App\Models\TimPemeriksa;
+use App\Models\AnggaranRkp;
+use App\Models\RealisasiSpj;
 use App\Models\WaktuPemeriksa;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -77,21 +79,188 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Akun berhasil dihapus!');
     }
 
-    public function dashboardTimPemeriksa()
+    public function dashboardAnggaran(Request $request)
     {
+        $tahun = $request->get('tahun', now()->year);
+
+        /*
+        |--------------------------------------------------------------------------
+        | 1. TOTAL ANGGARAN RKP
+        |--------------------------------------------------------------------------
+        */
+
+        $anggaran = AnggaranRkp::where('tahun', $tahun)->first();
+
+        $totalAnggaran = $anggaran
+            ? $anggaran->total_anggaran
+            : 0;
+        /*
+        |--------------------------------------------------------------------------
+        | 2. DATA SELURUH SURAT TUGAS
+        |--------------------------------------------------------------------------
+        */
+
         $suratTugas = SuratTugas::with([
-            'timPemeriksa.jabatan',
-            'timPemeriksa.waktuPemeriksa.provinsi',
+            'timPemeriksa.realisasiSpj',
         ])
-        ->latest()
-        ->first();
+            ->where('tahun', $tahun)
+            ->get();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | 3. HITUNG TOTAL BIAYA PEMERIKSAAN
+        |--------------------------------------------------------------------------
+        |
+        | Total biaya berasal dari:
+        |
+        | tim_pemeriksa.jumlah_biaya
+        |
+        */
+
+        $suratTugas->each(function ($st) {
+
+            $st->total_biaya = $st->timPemeriksa->sum(
+                'jumlah_biaya'
+            );
+
+            $st->uang_muka = $st->total_biaya * 0.75;
+
+            $st->total_spj = $st->timPemeriksa->sum(function ($tim) {
+
+                return $tim->realisasiSpj->jumlah_spj ?? 0;
+
+            });
+
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | 4. TOTAL UANG MUKA 75%
+        |--------------------------------------------------------------------------
+        */
+
+        $totalUangMuka = $suratTugas->sum('uang_muka');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | 5. TOTAL SPJ
+        |--------------------------------------------------------------------------
+        */
+
+        $totalSPJ = $suratTugas->sum('total_spj');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | 6. SISA ANGGARAN
+        |--------------------------------------------------------------------------
+        */
+
+        $sisaAnggaran = $totalAnggaran - $totalSPJ;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | 7. PERSENTASE REALISASI
+        |--------------------------------------------------------------------------
+        */
+
+        $persentaseRealisasi = $totalAnggaran > 0
+            ? ($totalSPJ / $totalAnggaran) * 100
+            : 0;
+
+
+        return view(
+            'anggaran.dashboardAnggaran',
+            compact(
+                'tahun',
+                'totalAnggaran',
+                'totalUangMuka',
+                'totalSPJ',
+                'sisaAnggaran',
+                'persentaseRealisasi',
+                'suratTugas'
+            )
+        );
+
+    }
+
+    public function storeAnggaran(Request $request)
+    {
+        $validated = $request->validate([
+            'tahun' => 'required|integer|min:2000|max:2100',
+            'total_anggaran' => 'required|numeric|min:0',
+        ]);
+
+        AnggaranRkp::updateOrCreate(
+            [
+                'tahun' => $validated['tahun'],
+            ],
+            [
+                'total_anggaran' => $validated['total_anggaran'],
+            ]
+        );
+
+        return redirect()
+            ->route('anggaran.dashboardAnggaran', [
+                'tahun' => $validated['tahun']
+            ])
+            ->with(
+                'success',
+                'Anggaran RKP berhasil disimpan.'
+            );
+    }
+
+
+    /**
+     * Simpan / update SPJ per Surat Tugas
+     */
+    public function storeSpj(Request $request, $timPemeriksaId)
+    {
+        $validated = $request->validate([
+        'jumlah_spj' => 'required|numeric|min:0',
+        ]);
+
+        RealisasiSpj::updateOrCreate(
+            [
+                'tim_pemeriksa_id' => $timPemeriksaId,
+            ],
+            [
+                'jumlah_spj' => $validated['jumlah_spj'],
+            ]
+        );
+
+        return back()->with(
+            'success',
+            'Realisasi SPJ berhasil disimpan.'
+        );
+    }
+
+    public function dashboardTimPemeriksa(Request $request)
+    {
+         $suratTugasList = SuratTugas::orderByDesc('tahun')
+        ->orderBy('nomor_st')
+        ->get();
+
+        $suratTugas = null;
+
+        if ($request->filled('surat_tugas_id')) {
+            $suratTugas = SuratTugas::with([
+                'timPemeriksa.jabatan',
+                'timPemeriksa.waktuPemeriksa.provinsi',
+                'timPemeriksa.realisasiSpj',
+            ])->find($request->surat_tugas_id);
+        }
 
         $jabatan = Jabatan::orderBy('nama_jabatan')->get();
 
         $provinsis = Provinsi::orderBy('nama_provinsi')->get();
 
         return view('anggaran.tim-pemeriksa', compact(
-            'suratTugas',
+            'suratTugas','suratTugasList',
             'jabatan',
             'provinsis'
         ));
@@ -165,6 +334,84 @@ class AdminController extends Controller
             ->with('success', 'Tim pemeriksa berhasil disimpan.');
     }
 
+    public function updateTimPemeriksa(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'nama_pemeriksa' => 'required|string|max:255',
+
+            'jabatan_id' => 'required|exists:jabatan,id',
+
+            'jangka_waktu' => 'required|integer|min:1',
+
+            'jumlah_biaya' => 'required|integer|min:1',
+
+            'provinsi' => 'nullable|array',
+
+            'provinsi.*' => 'nullable|integer|min:0',
+        ]);
+
+        DB::transaction(function () use ($validated, $id) {
+
+            $timPemeriksa = TimPemeriksa::findOrFail($id);
+
+            // Update data utama pemeriksa
+            $timPemeriksa->update([
+                'nama_pemeriksa' => $validated['nama_pemeriksa'],
+                'jabatan_id' => $validated['jabatan_id'],
+                'jangka_waktu' => $validated['jangka_waktu'],
+                'jumlah_biaya' => $validated['jumlah_biaya'],
+            ]);
+
+
+            // Hapus rincian provinsi lama
+            $timPemeriksa->waktuPemeriksa()->delete();
+
+
+            // Simpan rincian provinsi terbaru
+            if (!empty($validated['provinsi'])) {
+
+                foreach ($validated['provinsi'] as $provinsiId => $jumlahHari) {
+
+                    if ((int) $jumlahHari > 0) {
+
+                        WaktuPemeriksa::create([
+                            'tim_pemeriksa_id' => $timPemeriksa->id,
+                            'provinsi_id' => $provinsiId,
+                            'jumlah_hari' => $jumlahHari,
+                        ]);
+                    }
+                }
+            }
+        });
+
+        return back()->with(
+            'success',
+            'Data pemeriksa berhasil diperbarui.'
+        );
+    }
+
+    public function storeOrUpdateSpj(Request $request, $timPemeriksaId)
+    {
+        $validated = $request->validate([
+            'jumlah_spj' => 'required|integer|min:0',
+        ]);
+
+        $timPemeriksa = TimPemeriksa::findOrFail($timPemeriksaId);
+
+        RealisasiSpj::updateOrCreate(
+            [
+                'tim_pemeriksa_id' => $timPemeriksa->id,
+            ],
+            [
+                'jumlah_spj' => $validated['jumlah_spj'],
+            ]
+        );
+
+        return back()->with(
+            'success',
+            'SPJ berhasil disimpan.'
+        );
+    }
     // ==========================================
     // BAGIAN 3: MATRIKS PPK TRANS
     // ==========================================

@@ -267,7 +267,7 @@
 
                     {{-- DASHBOARD ANGGARAN --}}
                     <a
-                        href="{{ url('/dashboard-anggaran') }}"
+                        href="{{ route('anggaran.dashboardAnggaran') }}"
                         class="block
                             py-2
                             px-2
@@ -276,7 +276,7 @@
                             whitespace-nowrap
                             transition-all
                             duration-200
-                            {{ request()->is('dashboard-anggaran*')
+                            {{ request()->is('anggaran.dashboardAnggaran')
                                     ? 'text-white font-bold bg-white/10'
                                     : 'text-blue-100/70 hover:text-white hover:bg-white/5' }}"
                     >

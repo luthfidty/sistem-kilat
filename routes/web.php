@@ -24,8 +24,12 @@ Route::middleware('auth')->group(function () {
         return view('dashboard'); // Sesuaikan dengan nama file blade dashboard Anda
     });
 
+    Route::get('/dashboardAnggaran', [AdminController::class, 'dashboardAnggaran'])->name('anggaran.dashboardAnggaran');
+    Route::post('/dashboardAnggaran',[AdminController::class, 'storeAnggaran'])->name('anggaran.storeAnggaran');
+    Route::post('/tim-pemeriksa/{timPemeriksa}/spj',[AdminController::class, 'storeSpj'])->name('anggaran.storeSpj');
     Route::get('/tim-pemeriksa', [AdminController::class, 'dashboardTimPemeriksa'])->name('anggaran.tim-pemeriksa');
     Route::post('/tim-pemeriksa/simpan',[AdminController::class,'storeTimPemeriksa'])->name('storeTimPemeriksa');
+    Route::put('/tim-pemeriksa/{id}',[AdminController::class, 'updateTimPemeriksa'])->name('anggaran.updateTimPemeriksa');
 
     // Tombol logout
     Route::post('/logout', [SesiController::class, 'logout'])->name('logout');

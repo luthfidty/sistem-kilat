@@ -42,32 +42,6 @@
             box-shadow: none !important; 
         }
 
-        /* TAMPILAN KHUSUS SAAT PRINT DOCUMENT (CTRL+P) */
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #area-cetak-laporan, #area-cetak-laporan * {
-                visibility: visible;
-            }
-            #area-cetak-laporan {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                box-shadow: none !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            /* Hilangkan background abu-abu saat print modal */
-            #modalLaporanContent {
-                box-shadow: none !important;
-                max-width: 100% !important;
-            }
-        }
         .sidebar-aware-header {
             left: 72px;
             width: calc(100% - 72px);
@@ -78,6 +52,57 @@
             left: 256px;
             width: calc(100% - 256px);
         }
+        [x-cloak] {
+        display: none !important;
+            }
+
+        /* =========================================================
+        HEADER
+        ========================================================= */
+
+        .sidebar-aware-header {
+            left: 72px;
+            width: calc(100% - 72px);
+            transition:
+                left 300ms ease-in-out,
+                width 300ms ease-in-out;
+        }
+
+        /* Saat sidebar dibuka */
+        aside:hover ~ .sidebar-aware-header {
+            left: 256px;
+            width: calc(100% - 256px);
+        }
+
+
+        /* =========================================================
+        MAIN CONTENT
+        ========================================================= */
+
+        .sidebar-aware-content {
+            margin-left: 72px;
+            width: calc(100% - 72px);
+            padding-top: 88px;
+
+            transition:
+                margin-left 300ms ease-in-out,
+                width 300ms ease-in-out;
+        }
+
+        /* Saat sidebar dibuka */
+        aside:hover ~ .sidebar-aware-content {
+            margin-left: 256px;
+            width: calc(100% - 256px);
+        }
+
+
+        /* =========================================================
+        BODY
+        ========================================================= */
+
+        body {
+            overflow-x: hidden;
+        }
     </style>
 </head>
 <body class="bg-[#e2e6eb] min-h-screen font-sans text-gray-800 relative overflow-x-hidden" x-data="{ showEwsModal: true }">
@@ -85,20 +110,16 @@
     @include('layouts.sidebar')
     @include('layouts.header')
         {{-- CONTENT --}}
-        <main class="min-h-[calc(100vh-88px)] bg-slate-100">
+        <main class="sidebar-aware-content min-h-screen bg-slate-100">
 
-            <div class="py-8 px-4 sm:px-6 lg:px-8" x-data="timPemeriksa()">
-
-                <div class="max-w-[1600px] mx-auto">
-                    
-                <div class="min-h-screen bg-slate-100 py-8 px-4 sm:px-6 lg:px-8" x-data="timPemeriksa()">
-
+            <div class="px-4 sm:px-6 lg:px-8" x-data="timPemeriksa()">
+                
                 <div class="max-w-7xl mx-auto">
 
                     {{-- =====================================================
                         HEADER HALAMAN
                     ====================================================== --}}
-                    <div class="mb-8 mt-8">
+                    <div class="mb-6 mt-6">
 
                         <div class="bg-white/70backdrop-blur-xl border border-white/80 rounded-[2rem] shadow-[0_15px_40px_rgba(0,0,0,0.06)] px-8 py-7 flex
                             flex-colmd:flex-row md:items-center md:justify-between gap-5">
@@ -191,6 +212,56 @@
                         </div>
 
                     </div>
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-6 p-5">
+
+                        <div class="flex flex-col md:flex-row md:items-end gap-4">
+
+                            {{-- NOMOR ST --}}
+                            <div class="flex-1">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                    Nomor Surat Tugas
+                                </label>
+
+                                <select
+                                    id="suratTugasSelect"
+                                    onchange="pilihSuratTugas(this.value)"
+                                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm
+                                        focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                                >
+                                    <option value="">
+                                        -- Pilih Nomor ST --
+                                    </option>
+
+                                    @foreach ($suratTugasList as $st)
+                                        <option
+                                            value="{{ $st->id }}"
+                                            {{ request('surat_tugas_id') == $st->id ? 'selected' : '' }}
+                                        >
+                                            {{ $st->nomor_st }} - {{ $st->tahun }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- TAHUN --}}
+                            <div class="w-full md:w-40">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                    Tahun
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="tahunST"
+                                    value="{{ $suratTugas->tahun ?? '' }}"
+                                    readonly
+                                    class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5
+                                        text-sm text-slate-700"
+                                >
+                            </div>
+
+                        </div>
+
+                    </div>
 
                     {{-- =====================================================
                         STATE BELUM ADA DATA
@@ -260,30 +331,30 @@
                                     untuk mulai melakukan monitoring.
                                 </p>
 
+                                @if ($suratTugas)
                                 <button
                                     @click="openModal = true"
                                     class="inline-flex items-center gap-2 px-5 py-3
                                         bg-[#0B2A4A] hover:bg-[#12395f]
                                         text-white text-sm font-semibold
                                         rounded-xl shadow-sm
-                                        transition-all duration-200">
-
+                                        transition-all duration-200"
+                                >
                                     <svg class="w-5 h-5"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24">
-
-                                        <path stroke-linecap="round"
+                                        <path
+                                            stroke-linecap="round"
                                             stroke-linejoin="round"
                                             stroke-width="2"
                                             d="M12 4v16m8-8H4">
                                         </path>
-
                                     </svg>
 
-                                    Input Data Tim Pemeriksa
-
+                                        Input Data Tim Pemeriksa
                                 </button>
+                                @endif
 
                             </div>
 
@@ -354,6 +425,10 @@
                                                 </h2>
 
                                                 <p class="text-sm text-slate-500 mt-1">
+                                                    Tahun {{ $suratTugas->tahun ?? '-' }}
+                                                </p>
+
+                                                <p class="text-sm text-slate-500 mt-1">
                                                     Data Tim Pemeriksa
                                                 </p>
 
@@ -364,35 +439,6 @@
 
                                         {{-- ACTION --}}
                                         <div class="flex items-center gap-2">
-
-                                            <button
-                                                @click="openModal = true"
-                                                class="inline-flex items-center gap-2 px-4 py-2.5
-                                                    border border-slate-300
-                                                    bg-white hover:bg-slate-50
-                                                    text-slate-700
-                                                    text-sm font-semibold
-                                                    rounded-xl transition">
-
-                                                <svg class="w-4 h-4"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.5-9.5a2.121 2.121 0 013 3L12 14l-4 1 1-4 7.5-7.5z">
-                                                    </path>
-
-                                                </svg>
-
-                                                Edit Data
-
-                                            </button>
-
-
                                             <button
                                                 @click="addPemeriksa()"
                                                 class="inline-flex items-center gap-2 px-4 py-2.5
@@ -599,6 +645,10 @@
                                                     Jumlah Biaya<br>(Rp)
                                                 </th>
 
+                                                <th class="px-4 py-4 text-right font-bold">
+                                                    SPJ 100%<br>(Rp)
+                                                </th>
+
                                                 <th class="px-4 py-4 text-center font-bold">
                                                     Aksi
                                                 </th>
@@ -706,10 +756,54 @@
 
                                                     </td>
 
+                                                   <td class="px-4 py-4 text-right font-semibold">
+
+                                                        Rp {{ number_format(
+                                                            $tim->realisasiSpj->jumlah_spj ?? 0,
+                                                            0,
+                                                            ',',
+                                                            '.'
+                                                        ) }}
+
+                                                    </td>
 
                                                     {{-- AKSI --}}
                                                     <td class="px-4 py-4 text-center">
 
+                                                        <button
+                                                            type="button"
+                                                            onclick="openEditPemeriksaModal(
+                                                                {{ $tim->id }},
+                                                                '{{ addslashes($tim->nama_pemeriksa) }}',
+                                                                {{ $tim->jabatan_id }},
+                                                                {{ $tim->jangka_waktu }},
+                                                                {{ $tim->jumlah_biaya }},
+                                                                @js(
+                                                                    $tim->waktuPemeriksa->pluck('jumlah_hari', 'provinsi_id')
+                                                                )
+                                                            )"
+                                                            class="w-8 h-8 rounded-lg
+                                                                bg-amber-50 hover:bg-amber-100
+                                                                text-amber-600
+                                                                inline-flex items-center justify-center
+                                                                transition"
+                                                            title="Edit Pemeriksa"
+                                                        >
+                                                            <svg
+                                                                class="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    stroke-linecap="round"
+                                                                    stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
+                                                                    M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                                                                />
+                                                            </svg>
+                                                        </button>
                                                         <button
                                                             type="button"
                                                             class="w-8 h-8 rounded-lg
@@ -735,6 +829,23 @@
 
                                                             </svg>
 
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onclick="openSpjModal(
+                                                                {{ $tim->id }},
+                                                                '{{ addslashes($tim->nama_pemeriksa) }}',
+                                                                {{ $tim->realisasiSpj->jumlah_spj ?? 0 }}
+                                                            )"
+                                                            class="px-3 py-2
+                                                                bg-blue-50
+                                                                text-blue-600
+                                                                rounded-lg
+                                                                hover:bg-blue-100
+                                                                text-xs font-semibold"
+                                                        >
+                                                            {{ $tim->realisasiSpj ? 'Edit SPJ' : 'Input SPJ' }}
                                                         </button>
 
                                                     </td>
@@ -786,21 +897,27 @@
                     {{-- =====================================================
                         MODAL INPUT DATA
                     ====================================================== --}}
+                   
                     <div x-show="openModal" x-cloak class="fixed inset-0 z-[99999] flex items-center justify-center p-4">
 
-                        {{-- OVERLAY --}}
                         <div
                             class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
                             @click="openModal = false">
                         </div>
 
-                        <form action="{{ route('storeTimPemeriksa') }}"
+                        <form
+                            action="{{ route('storeTimPemeriksa') }}"
                             method="POST"
-                            class="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden">
-
+                            class="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden"
+                        >
                             @csrf
 
-                            <input type="hidden" name="surat_tugas_id" value="{{ $suratTugas->id }}">
+                            <input
+                                type="hidden"
+                                name="surat_tugas_id"
+                                value="{{ optional($suratTugas)->id }}"
+                            >
+                            
                         {{-- MODAL --}}
                         <div
                             class="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden"
@@ -1284,11 +1401,446 @@
 
                         </div>
                         </form>
-
                     </div>
 
                 </div>
 
+            </div>
+            {{-- =========================================================
+                MODAL INPUT SPJ
+            ========================================================= --}}
+            <div
+                id="modalSpj"
+                class="fixed inset-0 z-[100000] hidden items-center justify-center p-4"
+            >
+                
+                {{-- OVERLAY --}}
+                <div
+                    class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                    onclick="closeSpjModal()"
+                ></div>
+
+
+                {{-- MODAL --}}
+                <div
+                    class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+                >
+
+                    {{-- HEADER --}}
+                    <div class="px-6 py-5 bg-[#0B2A4A] text-white">
+
+                        <div class="flex items-center justify-between">
+
+                            <div>
+                                <h2 id="spjModalTitle" 
+                                class="text-lg font-bold">
+                                    Input SPJ 100%
+                                </h2>
+
+                                <p
+                                    id="spjNamaPemeriksa"
+                                    class="text-sm text-blue-100 mt-1"
+                                >
+                                    Pemeriksa: -
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onclick="closeSpjModal()"
+                                class="w-9 h-9 rounded-lg
+                                    hover:bg-white/10
+                                    flex items-center justify-center"
+                            >
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    {{-- FORM --}}
+                    <form
+                        id="formSpj"
+                        method="POST"
+                    >
+                        @csrf
+
+                        <div class="p-6">
+
+                            <label
+                                class="block text-sm font-semibold text-slate-700 mb-2"
+                            >
+                                Jumlah SPJ 100%
+                            </label>
+
+                            <div class="relative">
+
+                                <span
+                                    class="absolute left-3 top-1/2
+                                        -translate-y-1/2
+                                        text-sm font-semibold
+                                        text-slate-500"
+                                >
+                                    Rp
+                                </span>
+
+                                <input
+                                    id="inputSpj"
+                                    type="text"
+                                    name="jumlah_spj"
+                                    min="0"
+                                    required
+                                    class="w-full rounded-lg
+                                        border border-slate-300
+                                        pl-10 pr-3 py-3
+                                        text-sm
+                                        focus:border-blue-500
+                                        focus:ring-2
+                                        focus:ring-blue-100
+                                        outline-none"
+                                    placeholder="Masukkan jumlah SPJ"
+                                >
+
+                            </div>
+
+                        </div>
+
+
+                        {{-- FOOTER --}}
+                        <div
+                            class="px-6 py-4
+                                border-t border-slate-200
+                                bg-slate-50
+                                flex justify-end gap-3"
+                        >
+
+                            <button
+                                type="button"
+                                onclick="closeSpjModal()"
+                                class="px-4 py-2.5
+                                    rounded-lg
+                                    border border-slate-300
+                                    bg-white
+                                    hover:bg-slate-100
+                                    text-sm font-semibold
+                                    text-slate-700"
+                            >
+                                Batal
+                            </button>
+
+                            <button
+                                type="submit"
+                                class="px-4 py-2.5
+                                    rounded-lg
+                                    bg-[#0B2A4A]
+                                    hover:bg-[#12395f]
+                                    text-white
+                                    text-sm font-semibold"
+                            >
+                                Simpan
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+            <div
+                id="modalEditPemeriksa"
+                class="fixed inset-0 z-[100000] hidden items-center justify-center p-4"
+            >
+
+            <div
+                class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                onclick="closeEditPemeriksaModal()"
+            ></div>
+                <div class="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+                    {{-- HEADER --}}
+                    <div class="px-8 py-5 bg-[#0B2A4A] text-white">
+
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold">
+                                    Edit Data Pemeriksa
+                                </h3>
+
+                                <p
+                                    id="editNamaPreview"
+                                    class="text-sm text-blue-100 mt-1"
+                                ></p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onclick="closeEditPemeriksaModal()"
+                                class="w-9 h-9 rounded-lg
+                                    hover:bg-white/10
+                                    flex items-center justify-center"
+                            >
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+
+                        </div>
+                    </div>
+
+
+                    {{-- FORM --}}
+                    <form
+                        id="formEditPemeriksa"
+                        method="POST"
+                    >
+
+                        @csrf
+                        @method('PUT')
+
+                        <div class="p-6">
+
+                            {{-- DATA PEMERIKSA --}}
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                                {{-- NAMA --}}
+                                <div>
+
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                        Nama Pemeriksa
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="editNamaPemeriksa"
+                                        name="nama_pemeriksa"
+                                        required
+                                        class="w-full rounded-lg border border-slate-300
+                                            px-3 py-2.5 text-sm outline-none
+                                            focus:border-blue-500
+                                            focus:ring-2 focus:ring-blue-100"
+                                    >
+
+                                </div>
+
+
+                                {{-- JABATAN --}}
+                                <div>
+
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                        Jabatan / Peran
+                                    </label>
+
+                                    <select
+                                        id="editJabatan"
+                                        name="jabatan_id"
+                                        required
+                                        class="w-full rounded-lg border border-slate-300
+                                            px-3 py-2.5 text-sm outline-none
+                                            focus:border-blue-500
+                                            focus:ring-2 focus:ring-blue-100"
+                                    >
+
+                                        <option value="">
+                                            Pilih Jabatan / Peran
+                                        </option>
+
+                                        @foreach ($jabatan as $jab)
+                                            <option value="{{ $jab->id }}">
+                                                {{ $jab->nama_jabatan }}
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+
+                                </div>
+
+
+                                {{-- JANGKA WAKTU --}}
+                                <div>
+
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                        Jangka Waktu
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        id="editJangkaWaktu"
+                                        name="jangka_waktu"
+                                        min="1"
+                                        required
+                                        class="w-full rounded-lg border border-slate-300
+                                            px-3 py-2.5 text-sm outline-none
+                                            focus:border-blue-500
+                                            focus:ring-2 focus:ring-blue-100"
+                                    >
+
+                                </div>
+
+                            </div>
+
+
+                            {{-- PROVINSI --}}
+                            <div class="my-6 border-t border-slate-100"></div>
+
+                            <div class="mb-4">
+
+                                <h4 class="text-xs font-bold text-slate-800">
+                                    Waktu Pemeriksaan per Provinsi
+                                </h4>
+
+                                <p class="text-[11px] text-slate-500 mt-1">
+                                    Ubah jumlah hari pemeriksaan untuk setiap provinsi.
+                                </p>
+
+                            </div>
+
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                                @foreach ($provinsis as $provinsi)
+
+                                    <div>
+
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                            {{ $provinsi->nama_provinsi }}
+                                        </label>
+
+                                        <div class="relative">
+
+                                            <input
+                                                type="number"
+                                                id="editProvinsi{{ $provinsi->id }}"
+                                                name="provinsi[{{ $provinsi->id }}]"
+                                                min="0"
+                                                placeholder="0"
+                                                class="w-full rounded-lg border border-slate-300
+                                                    px-3 py-2.5 pr-14 text-sm
+                                                    outline-none
+                                                    focus:border-blue-500
+                                                    focus:ring-2 focus:ring-blue-100"
+                                            >
+
+                                            <span
+                                                class="absolute right-3 top-1/2
+                                                    -translate-y-1/2
+                                                    text-xs text-slate-400"
+                                            >
+                                                hari
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                @endforeach
+
+                            </div>
+
+
+                            {{-- BIAYA --}}
+                            <div
+                                class="mt-6 flex items-center justify-between
+                                    rounded-xl bg-slate-50
+                                    border border-slate-200 px-4 py-3"
+                            >
+
+                                <div>
+
+                                    <p class="text-xs font-bold text-slate-700">
+                                        Jumlah Biaya
+                                    </p>
+
+                                    <p class="text-[11px] text-slate-500">
+                                        Ubah total biaya pemeriksaan.
+                                    </p>
+
+                                </div>
+
+                                <div class="flex items-center">
+
+                                    <span class="text-sm font-bold text-[#0B2A4A] mr-2">
+                                        Rp
+                                    </span>
+
+                                    <input
+                                        type="text"
+                                        id="editJumlahBiaya"
+                                        name="jumlah_biaya"
+                                        required
+                                        inputmode="numeric"
+                                        class="w-52 rounded-lg border border-slate-300
+                                            bg-white px-3 py-2 text-right
+                                            text-base font-extrabold
+                                            text-[#0B2A4A]
+                                            outline-none
+                                            focus:border-blue-500
+                                            focus:ring-2 focus:ring-blue-100"
+                                    >
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        {{-- FOOTER --}}
+                        <div
+                            class="flex justify-end gap-2
+                                border-t border-slate-200
+                                px-6 py-4"
+                        >
+
+                            <button
+                                type="button"
+                                onclick="closeEditPemeriksaModal()"
+                                class="px-4 py-2 rounded-lg
+                                    bg-slate-100 hover:bg-slate-200
+                                    text-slate-600 text-xs font-semibold"
+                            >
+                                Batal
+                            </button>
+
+                            <button
+                                type="submit"
+                                class="px-4 py-2 rounded-lg
+                                    bg-blue-600 hover:bg-blue-700
+                                    text-white text-xs font-semibold"
+                            >
+                                Simpan Perubahan
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
             </div>
 
 
@@ -1297,6 +1849,17 @@
             ========================================================= --}}
             <script>
 
+            function pilihSuratTugas(id) {
+
+                if (!id) {
+                    window.location.href = "{{ route('anggaran.tim-pemeriksa') }}";
+                    return;
+                }
+
+                window.location.href =
+                    "{{ route('anggaran.tim-pemeriksa') }}" +
+                    "?surat_tugas_id=" + id;
+            }
             function timPemeriksa() {
 
                 return {
@@ -1435,7 +1998,181 @@
                 }
 
             }
+            function openSpjModal(
+                timPemeriksaId,
+                namaPemeriksa,
+                jumlahSPJ
+            ) {
+                const modal = document.getElementById('modalSpj');
+                const form = document.getElementById('formSpj');
+                const input = document.getElementById('inputSpj');
+                const nama = document.getElementById('spjNamaPemeriksa');
+                const title = document.getElementById('spjModalTitle');
 
+                // Set action form
+                form.action = `/tim-pemeriksa/${timPemeriksaId}/spj`;
+
+                // Set nama pemeriksa
+                nama.innerText = `Pemeriksa: ${namaPemeriksa}`;
+
+                // Cek apakah sudah ada SPJ
+                if (jumlahSPJ && Number(jumlahSPJ) > 0) {
+
+                    title.innerText = 'Edit SPJ 100%';
+
+                    input.value =
+                        new Intl.NumberFormat('id-ID').format(jumlahSPJ);
+
+                } else {
+
+                    title.innerText = 'Input SPJ 100%';
+
+                    input.value = '';
+
+                }
+
+                // Tampilkan modal
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                setTimeout(() => {
+                    input.focus();
+                }, 100);
+            }
+
+
+            function closeSpjModal() {
+
+                const modal = document.getElementById('modalSpj');
+
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+
+            }
+
+
+            // Format angka saat mengetik
+            document.getElementById('inputSpj')
+                .addEventListener('input', function () {
+
+                    let value = this.value.replace(/\D/g, '');
+
+                    this.value = value
+                        ? new Intl.NumberFormat('id-ID').format(value)
+                        : '';
+
+                });
+
+
+            // Hapus titik sebelum dikirim
+            document.getElementById('formSpj')
+                .addEventListener('submit', function () {
+
+                    const input = document.getElementById('inputSpj');
+
+                    input.value = input.value.replace(/\./g, '');
+
+                });
+            function openEditPemeriksaModal(
+                id,
+                nama,
+                jabatanId,
+                jangkaWaktu,
+                jumlahBiaya,
+                provinsi
+            ) {
+                const modal = document.getElementById('modalEditPemeriksa');
+                const form = document.getElementById('formEditPemeriksa');
+
+                // Action update
+                form.action = `/tim-pemeriksa/${id}`;
+
+                // Data utama
+                document.getElementById('editNamaPemeriksa').value = nama;
+                document.getElementById('editJabatan').value = jabatanId;
+                document.getElementById('editJangkaWaktu').value = jangkaWaktu;
+
+                // Format biaya: 155630000 -> 155.630.000
+                document.getElementById('editJumlahBiaya').value =
+                    new Intl.NumberFormat('id-ID').format(jumlahBiaya || 0);
+
+                // Nama preview
+                document.getElementById('editNamaPreview').innerText =
+                    `Pemeriksa: ${nama}`;
+
+                // Reset semua provinsi
+                @foreach ($provinsis as $provinsi)
+                    document.getElementById(
+                        'editProvinsi{{ $provinsi->id }}'
+                    ).value = 0;
+                @endforeach
+
+                // Isi data provinsi yang sudah ada
+                if (provinsi) {
+
+                    Object.keys(provinsi).forEach(function (provinsiId) {
+
+                        const input = document.getElementById(
+                            `editProvinsi${provinsiId}`
+                        );
+
+                        if (input) {
+                            input.value = provinsi[provinsiId];
+                        }
+
+                    });
+                }
+
+                // Tampilkan modal
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                setTimeout(() => {
+                    document.getElementById('editJangkaWaktu').focus();
+                }, 100);
+            }
+
+
+            function closeEditPemeriksaModal() {
+
+                const modal = document.getElementById('modalEditPemeriksa');
+
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+
+            // FORMAT BIAYA
+            function formatRupiahInput(value) {
+
+                value = value.replace(/\D/g, '');
+
+                if (!value) {
+                    return '';
+                }
+
+                return value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            }
+
+
+            // Saat mengetik biaya
+            document.getElementById('editJumlahBiaya')
+                .addEventListener('input', function () {
+
+                    this.value = formatRupiahInput(this.value);
+
+                });
+
+
+            // Sebelum submit, hapus titik
+            document.getElementById('formEditPemeriksa')
+                .addEventListener('submit', function () {
+
+                    const input = document.getElementById('editJumlahBiaya');
+
+                    input.value = input.value.replace(/\./g, '');
+
+                });
             </script>
 
 
