@@ -68,23 +68,59 @@
                 max-width: 100% !important;
             }
         }
+        .sidebar-aware-header {
+            left: 72px;
+            width: calc(100% - 72px);
+        }
+
+        /* Sidebar expanded */
+        aside:hover ~ .sidebar-aware-header {
+            left: 256px;
+            width: calc(100% - 256px);
+        }
+        .dashboard-content {
+            margin-left: 72px;
+            width: calc(100% - 72px);
+            transition: 
+                margin-left 300ms ease-in-out,
+                width 300ms ease-in-out;
+        }
+
+        /* Sidebar sedang terbuka */
+        aside:hover ~ .dashboard-content {
+            margin-left: 256px;
+            width: calc(100% - 256px);
+        }
     </style>
 </head>
 <body class="bg-[#e2e6eb] min-h-screen font-sans text-gray-800 relative overflow-x-hidden" x-data="{ showEwsModal: true }">
     
-    <!-- Memanggil Header -->
-    @include('layouts.header')
-
+    @include('layouts.sidebar')
+    <div class="dashboard-content">
+        @include('layouts.header')
     <!-- ========================================== -->
     <!-- BAGIAN 1: PETA FULL SCREEN (HERO SECTION)  -->
     <!-- ========================================== -->
-    <div class="relative w-full h-screen z-0 no-print">
+    <div class="relative w-full h-[calc(100vh-76px)] z-0 no-print">
         <div id="map" class="w-full h-full"></div>
-        <div class="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#e2e6eb] to-transparent z-10 pointer-events-none"></div>
-        <div class="absolute bottom-32 left-6 z-10 bg-black/60 border border-white/20 text-white px-5 py-2.5 rounded-full flex items-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] pointer-events-none">
+
+        <div class="absolute inset-x-0 bottom-0 h-48 
+                    bg-gradient-to-t from-[#e2e6eb] to-transparent 
+                    z-10 pointer-events-none">
+        </div>
+
+        <div class="absolute bottom-32 left-6 z-10 
+                    bg-black/60 border border-white/20 text-white 
+                    px-5 py-2.5 rounded-full flex items-center 
+                    shadow-[0_4px_15px_rgba(0,0,0,0.5)] 
+                    pointer-events-none">
+
             <span class="w-3 h-3 rounded-full bg-red-500 animate-ping mr-3"></span>
             <span class="w-3 h-3 rounded-full bg-red-500 absolute mr-3"></span>
-            <span class="text-xs font-bold uppercase tracking-widest ml-4">Live Geotagging</span>
+
+            <span class="text-xs font-bold uppercase tracking-widest ml-4">
+                Live Geotagging
+            </span>
         </div>
     </div>
 
@@ -443,6 +479,8 @@
             </button>
         </div>
     </div>
+    </div>
+    
 
     <!-- Script JavaScript Terpadu -->
     <script>

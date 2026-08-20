@@ -9,8 +9,8 @@ class User extends Authenticatable
 {
     use Notifiable;
 
-    protected $table = 'users'; // Nama tabel kustom
-    protected $primaryKey = 'users_id'; // Primary key kustom
+    protected $table = 'user'; // Nama tabel kustom
+    protected $primaryKey = 'user_id'; // Primary key kustom
 
     protected $fillable = [
         'username',
